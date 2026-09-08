@@ -4,6 +4,11 @@
 	directory = *
 	directory = *
 	directory = *
+	directory = *
+	directory = *
+	directory = *
 [user]
 	email = vn812013@gmail.com
 	name = 3hbin
+[credential]
+	helper = store

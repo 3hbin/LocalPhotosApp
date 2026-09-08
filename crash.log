@@ -1,0 +1,4 @@
+--------- beginning of main
+09-03 22:24:55.320 20946 21257 E libc    : Access denied finding property "ro.kirin.product.platform"
+09-03 22:24:55.320 20946 21257 E HwExtendedCodec: mime: audio/vorbis matching compontent failed!
+09-03 22:24:55.458 20946 20956 E         : [ZeroHung]zrhung_get_config: Get config failed for wp[0x0008]

@@ -1,0 +1,1 @@
+tellraw @s {"rawtext":[{"text":"§b--- BẢNG LỆNH MOD SÓNG THẦN ---\n§a/function songthan §7: Sóng thần thường\n§c/function songthan_lon §7: Sóng thần khổng lồ\n§6/function songthan_lua §7: Sóng thần LAVA\n§e/function lu_dang §7: Nước lũ dâng cao dần\n§d/function dung §7: Tắt mod\n§q/function xoa §7: Xóa nước xung quanh"}]}
