@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Game 3D Né Chướng Ngại Vật</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; background: #000; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; font-weight: bold; z-index: 10; }
+        .controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-around; z-index: 10; }
+        .btn { width: 80px; height: 80px; background: rgba(255, 255, 255, 0.4); border: 2px solid white; border-radius: 50%; font-size: 30px; color: white; display: flex; align-items: center; justify-content: center; user-select: none; }
+        .btn:active { background: rgba(255, 255, 255, 0.8); }
+        #game-over { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; z-index: 20; }
+        #game-over button { padding: 10px 20px; font-size: 18px; border: none; background: #28a745; color: white; border-radius: 5px; }
+    </style>
+    <!-- Thư viện Three.js tạo đồ họa 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="ui">Điểm: <span id="score">0</span></div>
+    
+    <div id="game-over">
+        <h2>GAME OVER!</h2>
+        <p>Điểm của bạn: <span id="final-score">0</span></p>
+        <button onclick="restartGame()">Chơi Lại</button>
+    </div>
+
+    <div class="controls">
+        <div class="btn" id="left-btn">◄</div>
+        <div class="btn" id="right-btn">►</div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, player;
+        let obstacles = [];
+        let score = 0;
+        let isGameOver = false;
+        let moveLeft = false, moveRight = false;
+
+        function init() {
+            // 1. Tạo Scene & Camera
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 6);
+            camera.lookAt(0, 0, 0);
+
+            // 2. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // 3. Ánh sáng
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(0, 10, 10).normalize();
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x404040));
+
+            // 4. Đường chạy (Floor)
+            const floorGeo = new THREE.PlaneGeometry(10, 100);
+            const floorMat = new THREE.MeshBasicMaterial({ color: 0x16213e, wireframe: true });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.z = -40;
+            scene.add(floor);
+
+            // 5. Nhân vật (Quả cầu 3D)
+            const playerGeo = new THREE.SphereGeometry(0.5, 32, 32);
+            const playerMat = new THREE.MeshPhongMaterial({ color: 0x00fff5 });
+            player = new THREE.Mesh(playerGeo, playerMat);
+            player.position.set(0, 0.5, 3);
+            scene.add(player);
+
+            // Sự kiện điều khiển nút bấm
+            setupControls();
+
+            // Vòng lặp game
+            animate();
+        }
+
+        function spawnObstacle() {
+            if (isGameOver) return;
+            const geo = new THREE.BoxGeometry(1, 1, 1);
+            const mat = new THREE.MeshPhongMaterial({ color: 0xe94560 });
+            const obstacle = new THREE.Mesh(geo, mat);
+
+            // Vị trí ngẫu nhiên trên 3 làn chạy (-2, 0, 2)
+            const lanes = [-2, 0, 2];
+            obstacle.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+            obstacle.position.y = 0.5;
+            obstacle.position.z = -50;
+
+            scene.add(obstacle);
+            obstacles.push(obstacle);
+        }
+
+        let frameCount = 0;
+        function animate() {
+            if (isGameOver) return;
+
+            requestAnimationFrame(animate);
+            frameCount++;
+
+            // Tạo vật cản mới mỗi 40 frame
+            if (frameCount % 40 === 0) {
+                spawnObstacle();
+            }
+
+            // Di chuyển nhân vật
+            if (moveLeft && player.position.x > -2.5) player.position.x -= 0.15;
+            if (moveRight && player.position.x < 2.5) player.position.x += 0.15;
+
+            // Di chuyển vật cản & Xử lý va chạm
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.position.z += 0.4; // Tốc độ di chuyển
+
+                // Kiểm tra va chạm (Bounding box đơn giản)
+                if (Math.abs(obs.position.z - player.position.z) < 0.8 &&
+                    Math.abs(obs.position.x - player.position.x) < 0.8) {
+                    endGame();
+                }
+
+                // Xóa vật cản khi đi qua màn hình
+                if (obs.position.z > 5) {
+                    scene.remove(obs);
+                    obstacles.splice(i, 1);
+                    score += 10;
+                    document.getElementById('score').innerText = score;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function setupControls() {
+            const leftBtn = document.getElementById('left-btn');
+            const rightBtn = document.getElementById('right-btn');
+
+            leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft = true; });
+            leftBtn.addEventListener('touchend', () => moveLeft = false);
+            leftBtn.addEventListener('mousedown', () => moveLeft = true);
+            leftBtn.addEventListener('mouseup', () => moveLeft = false);
+
+            rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveRight = true; });
+            rightBtn.addEventListener('touchend', () => moveRight = false);
+            rightBtn.addEventListener('mousedown', () => moveRight = true);
+            rightBtn.addEventListener('mouseup', () => moveRight = false);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        function restartGame() {
+            // Xóa tất cả chướng ngại vật cũ
+            obstacles.forEach(obs => scene.remove(obs));
+            obstacles = [];
+            score = 0;
+            player.position.x = 0;
+            document.getElementById('score').innerText = 0;
+            document.getElementById('game-over').style.display = 'none';
+            isGameOver = false;
+            animate();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
